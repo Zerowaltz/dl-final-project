@@ -90,9 +90,11 @@ class InferNER(tf.keras.layers.Layer):
 
         self.dense1 = tf.keras.layers.Dense(128)
 
-        self.softmax = tf.keras.layers.Softmax()         
+        self.softmax = tf.keras.layers.Softmax()
 
         self.ReLU = tf.keras.layers.ReLU()
+
+
     def call(self, encoded_images, captions):
         # TODO:
         # 1) Embed the encoded images into a vector of the correct dimension for initial state (299x299)
