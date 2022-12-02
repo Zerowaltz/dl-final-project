@@ -1,12 +1,14 @@
 import tensorflow as tf
 import tensorflow.keras as keras
 
+from transformer import PositionalEncoding, TransformerBlock
+
+
 class TransformerDecoder(tf.keras.Model):
 
     def __init__(self, vocab_size, hidden_size, window_size, **kwargs):
-
         super().__init__(**kwargs)
-        self.vocab_size  = vocab_size
+        self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.window_size = window_size
 
@@ -39,16 +41,15 @@ class TransformerDecoder(tf.keras.Model):
 
 ########################################################################################
 
-#class Encoder(tf)
+# class Encoder(tf)
 
 ########################################################################################
 
 class InferNER(tf.keras.layers.Layer):
 
     def __init__(self, vocab_size, two_stack_size, window_size, **kwargs):
-
         super().__init__(**kwargs)
-        self.vocab_size  = vocab_size
+        self.vocab_size = vocab_size
         self.two_stack_size = two_stack_size
         self.window_size = window_size
         self.inception = tf.keras.applications.InceptionV3(
@@ -57,7 +58,7 @@ class InferNER(tf.keras.layers.Layer):
             input_tensor=None,
             input_shape=None,
             pooling=None,
-            classes=1000, #change depending on number of classes
+            classes=1000,  # change depending on number of classes
             classifier_activation="softmax",
         )
 
@@ -67,26 +68,23 @@ class InferNER(tf.keras.layers.Layer):
 
         # Define embedding layers:
         self.stacked_embedding = tf.keras.layers.Embedding(vocab_size, 1024)
-        initializer = tf.keras.initializers.RandomUniform(minval=-tf.sqrt(3/30), maxval=tf.sqrt(3/30))
-
+        initializer = tf.keras.initializers.RandomUniform(minval=-tf.sqrt(3 / 30), maxval=tf.sqrt(3 / 30))
 
         self.character_embedding = tf.keras.layers.Embedding(vocab_size, 30, embeddings_initializer=initializer)
         self.sentence_embedding = tf.keras.layers.Embedding(vocab_size, 512)
 
         # Define decoder layer that handles language and image context:     
         self.decoder = tf.keras.layers.GRU(two_stack_size, return_sequences=True, activation='relu')
-        self.encoder = None # can use our hw implementation
+        self.encoder = None  # can use our hw implementation
         # Define classification layer (LOGIT OUTPUT)
-        #self.classifier = tf.keras.layers.Dense(vocab_size)
-        #self.global_average_pooling = tf.keras.layers.GlobalAveragePooling2D()
-        #self.conv2d = keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(300, 300, 3)) #change shape
+        # self.classifier = tf.keras.layers.Dense(vocab_size)
 
-
-        self.BLSTM1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True),
-                             ) #one of two for word encoding
-        self.BLSTM2 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True),
-                             ) #two of two for word encoding
-        self.BLSTM3 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)) #layer after combining text encodings   
+        self.BLSTM1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(512, dropout=0.5, activity_regularizer=tf.keras.regularizers.L2(1e-3), return_sequences=True),
+                                                    )  # one of two for word encoding
+        self.BLSTM2 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(512, dropout=0.5, activity_regularizer=tf.keras.regularizers.L2(1e-3), return_sequences=True),
+                                                    )  # two of two for word encoding
+        self.BLSTM3 = tf.keras.layers.Bidirectional(
+            tf.keras.layers.LSTM(200, dropout=0.3, return_sequences=True))  # layer after combining text encodings
 
         self.dense1 = tf.keras.layers.Dense(128)
 
@@ -94,24 +92,27 @@ class InferNER(tf.keras.layers.Layer):
 
         self.ReLU = tf.keras.layers.ReLU()
 
-
-    def call(self, encoded_images, captions):
+    def call(self, captions, encoded_images=None):
         # TODO:
         # 1) Embed the encoded images into a vector of the correct dimension for initial state (299x299)
         # 2) 2-stack, character, and sentence level encoders
         # 3) Apply dense layer(s) to the decoder to generate prediction **logits**
-        embedded_image = tf.keras.applications.inception_v3.preprocess_input(encoded_images)
+        if encoded_images is not None:
+            embedded_image = tf.keras.applications.inception_v3.preprocess_input(encoded_images)
         embedded_caption = self.stacked_embedding(captions)
         ro = self.BLSTM1(embedded_caption)
         rpo = self.BLSTM2(ro)
-        wt = tf.add(ro, rpo) #(1)
-
+        wt = tf.add(ro, rpo)  # (1)
+        conv_net = self.character_embedding
+        conv_net = tf.keras.layers.Conv1D(filters=64, kernel_size=3, activity_regularizer=tf.keras.regularizers.L2(1e-3), activation='relu')(conv_net)
+        conv_net = tf.keras.layers.Conv1D(filters=64, kernel_size=3, activity_regularizer=tf.keras.regularizers.L2(1e-3), activation='relu')(conv_net)
+        conv_net = tf.keras.layers.GlobalAveragePooling1D()(conv_net)
+        conv_net = tf.keras.layers.Dense(32, activation='relu')(conv_net)
         # If time, implement character level encoder and sentence level encoder
-        m = wt
+        m = [wt, conv_net]
 
         h_t = self.BLSTM3(m)
         probs = self.softmax(self.dense1(h_t))
         return probs
-
 
 ########################################################################################

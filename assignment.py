@@ -3,12 +3,15 @@ import argparse
 import numpy as np
 import pickle
 import tensorflow as tf
+import tensorflow_datasets as tfds
 from typing import Optional
 from types import SimpleNamespace
+from datasets import load_dataset
 
-
+dataset = load_dataset("wnut_17").with_format('tf')
+print(dataset['test'][0])
 from model import ImageCaptionModel, accuracy_function, loss_function
-from decoder import TransformerDecoder, RNNDecoder
+from decoder import TransformerDecoder, InferNER
 import transformer
 
 
@@ -62,7 +65,7 @@ def main(args):
         ##############################################################################
         ## Model Construction
         decoder_class = {
-            'rnn'           : RNNDecoder,
+            'rnn'           : InferNER,
             'transformer'   : TransformerDecoder
         }[args.type]
         

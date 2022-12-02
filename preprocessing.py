@@ -7,16 +7,6 @@ import tensorflow as tf
 import numpy as np
 import collections
 from tqdm import tqdm
-import pandas as pd
-
-def json_to_csv(json_file):
-    # enter the csv filename you wish to save it as
-    CSV_FILE = json_file[:-5] +'.csv'
-
-    with open(json_file, encoding = 'utf-8') as f:
-        df = pd.read_json(f)
-    
-    df.to_csv(CSV_FILE, encoding = 'utf-8', index = False)
 
 def preprocess_captions(captions, window_size):
     for i, caption in enumerate(captions):
@@ -42,7 +32,7 @@ def get_image_features(image_names, data_folder, vis_subset=100):
     '''
     image_features = []
     vis_images = []
-    inception = tf.keras.applications.InceptionV3(
+    resnet = tf.keras.applications.InceptionV3(
         include_top=True,
         weights="imagenet",
         input_tensor=None,
@@ -59,7 +49,7 @@ def get_image_features(image_names, data_folder, vis_subset=100):
         with Image.open(img_path) as img:
             img_array = np.array(img.resize((299,299)))
         img_in = tf.keras.applications.InceptionV3.preprocess_input(img_array)[np.newaxis, :]
-        image_features += [gap(inception(img_in))]
+        image_features += [gap(resnet(img_in))]
         if i < vis_subset:
             vis_images += [img_array]
     print()

@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/dl-final-project.iml" filepath="$PROJECT_DIR$/.idea/dl-final-project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../hw5-imcap-Zerowaltz/.idea/hw5-imcap-Zerowaltz.iml" filepath="$PROJECT_DIR$/../hw5-imcap-Zerowaltz/.idea/hw5-imcap-Zerowaltz.iml" />
     </modules>
   </component>
 </project>
