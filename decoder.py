@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 
 from transformer import PositionalEncoding, TransformerBlock
+from simple_elmo import ElmoModel
 
 
 class TransformerDecoder(tf.keras.Model):
@@ -65,9 +66,10 @@ class InferNER(tf.keras.layers.Layer):
         # TODO:
 
         self.image_embedding = tf.keras.layers.Dense(two_stack_size)
-
+        model = ElmoModel()
+        self.stacked_embedding = model.load("209.zip")
         # Define embedding layers:
-        self.stacked_embedding = tf.keras.layers.Embedding(vocab_size, 1024)
+        #self.stacked_embedding = tf.keras.layers.Embedding(vocab_size, 1024)
         initializer = tf.keras.initializers.RandomUniform(minval=-tf.sqrt(3 / 30), maxval=tf.sqrt(3 / 30))
 
         self.character_embedding = tf.keras.layers.Embedding(vocab_size, 30, embeddings_initializer=initializer)
@@ -99,17 +101,17 @@ class InferNER(tf.keras.layers.Layer):
         # 3) Apply dense layer(s) to the decoder to generate prediction **logits**
         if encoded_images is not None:
             embedded_image = tf.keras.applications.inception_v3.preprocess_input(encoded_images)
-        embedded_caption = self.stacked_embedding(captions)
+        embedded_caption = self.stacked_embedding.get_elmo_vectors(captions, layers="average")
         ro = self.BLSTM1(embedded_caption)
         rpo = self.BLSTM2(ro)
-        wt = tf.add(ro, rpo)  # (1)
-        conv_net = self.character_embedding
+        wt = tf.keras.layers.Flatten()(tf.add(ro, rpo))  # (1)
+        conv_net = self.character_embedding(captions)
         conv_net = tf.keras.layers.Conv1D(filters=64, kernel_size=3, activity_regularizer=tf.keras.regularizers.L2(1e-3), activation='relu')(conv_net)
         conv_net = tf.keras.layers.Conv1D(filters=64, kernel_size=3, activity_regularizer=tf.keras.regularizers.L2(1e-3), activation='relu')(conv_net)
         conv_net = tf.keras.layers.GlobalAveragePooling1D()(conv_net)
         conv_net = tf.keras.layers.Dense(32, activation='relu')(conv_net)
         # If time, implement character level encoder and sentence level encoder
-        m = [wt, conv_net]
+        m = tf.concat([wt, conv_net])
 
         h_t = self.BLSTM3(m)
         probs = self.softmax(self.dense1(h_t))

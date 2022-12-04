@@ -20,6 +20,16 @@ class ImageCaptionModel(tf.keras.Model):
         '''
         Create a facade to mimic normal keras fit routine
         '''
+        '''
+        adamax = Adamax(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+model.compile(optimizer=adamax,
+              loss={'seg_output': 'binary_crossentropy', 
+                    'cat_output': 'categorical_crossentropy'},
+              loss_weights={'seg_output': 1., 
+                            'cat_output': 1.},
+              metrics={'seg_output': [utils.fbeta_score, 'accuracy'],
+                       'cat_output': [utils.fbeta_score, 'accuracy']})
+        '''
         self.optimizer = optimizer
         self.loss_function = loss 
         self.accuracy_function = metrics[0]
