@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 import tensorflow.keras as keras
 
@@ -46,7 +48,7 @@ class TransformerDecoder(tf.keras.Model):
 
 ########################################################################################
 
-class InferNER(tf.keras.Model):
+class InferNER(tf.keras.layers.Layer):
 
     def __init__(self, vocab_size, two_stack_size, window_size, **kwargs):
         super().__init__(**kwargs)
@@ -64,10 +66,11 @@ class InferNER(tf.keras.Model):
         )
 
         # TODO:
+        self.run_eagerly = True
 
         self.image_embedding = tf.keras.layers.Dense(two_stack_size)
-        model = ElmoModel()
-        self.stacked_embedding = model.load("209.zip")
+        self.elmo_model = ElmoModel()
+        self.elmo_model.load(os.getcwd())
         # Define embedding layers:
         #self.stacked_embedding = tf.keras.layers.Embedding(vocab_size, 1024)
         initializer = tf.keras.initializers.RandomUniform(minval=-tf.sqrt(3 / 30), maxval=tf.sqrt(3 / 30))
@@ -101,7 +104,7 @@ class InferNER(tf.keras.Model):
         # 3) Apply dense layer(s) to the decoder to generate prediction **logits**
         if encoded_images is not None:
             embedded_image = tf.keras.applications.inception_v3.preprocess_input(encoded_images)
-        embedded_caption = self.stacked_embedding.get_elmo_vectors(captions, layers="average")
+        embedded_caption = self.elmo_model.get_elmo_vectors(captions, layers="average")
         ro = self.BLSTM1(embedded_caption)
         rpo = self.BLSTM2(ro)
         wt = tf.keras.layers.Flatten()(tf.add(ro, rpo))  # (1)
