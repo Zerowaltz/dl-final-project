@@ -46,7 +46,7 @@ class TransformerDecoder(tf.keras.Model):
 
 ########################################################################################
 
-class InferNER(tf.keras.layers.Layer):
+class InferNER(tf.keras.Model):
 
     def __init__(self, vocab_size, two_stack_size, window_size, **kwargs):
         super().__init__(**kwargs)
